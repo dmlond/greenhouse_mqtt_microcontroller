@@ -39,11 +39,11 @@ humidity_feed = "greenhouse/humidity"
 def connected(client, userdata, flags, rc):
     # This function will be called when the client is connected
     # successfully to the broker.
-    print("Connected to London MQTT!")
+    print("Connected to MQTT!")
 
 def disconnected(client, userdata, rc):
     # This method is called when the client is disconnected
-    print("Disconnected from London MQTT!")
+    print("Disconnected from MQTT!")
 
 
 def get_voltage(pin):
@@ -67,7 +67,7 @@ mqtt_client.on_connect = connected
 mqtt_client.on_disconnect = disconnected
 
 # Connect the client to the MQTT broker.
-print("Connecting to Adafruit IO...")
+print("Connecting to MQTT...")
 mqtt_client.connect()
 
 # Create library object using our Bus I2C port
