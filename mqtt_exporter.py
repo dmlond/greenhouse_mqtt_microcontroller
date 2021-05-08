@@ -3,7 +3,7 @@ import random
 import time
 import paho.mqtt.client as mqtt
 
-guage = { 
+gauge = { 
   "greenhouse/light": Gauge('light','light in lumens'),
   "greenhouse/temperature": Gauge('temperature', 'temperature in fahrenheit'),
   "greenhouse/humidity": Gauge('humidity','relative % humidity')
@@ -26,7 +26,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     topic = msg.topic
     payload = msg.payload
-    guage[topic].set(payload)
+    gauge[topic].set(payload)
 
 client = mqtt.Client()
 client.username_pw_set(mqtt_secrets["mqtt_user"],mqtt_secrets['mqtt_password'])
