@@ -1,5 +1,3 @@
-# SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
-# SPDX-License-Identifier: MIT
 # https://learn.adafruit.com/mqtt-in-circuitpython/circuitpython-wifi-usage
 # https://learn.adafruit.com/mqtt-in-circuitpython/connecting-to-a-mqtt-broker
 # required from adafruit_bundle:
