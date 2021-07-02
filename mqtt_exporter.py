@@ -1,47 +1,90 @@
-from prometheus_client import start_http_server, Gauge
-import random
+# https://learn.adafruit.com/mqtt-in-circuitpython/circuitpython-wifi-usage
+# https://learn.adafruit.com/mqtt-in-circuitpython/connecting-to-a-mqtt-broker
+# required from adafruit_bundle:
+# - adafruit_requests
+# - adafruit_minimqtt
+# - adafruit_bus_device
+# - adafruit_register
+# - adafruit_si7021
 import time
-import paho.mqtt.client as mqtt
+import ssl
+import socketpool
+import wifi
+import adafruit_minimqtt.adafruit_minimqtt as MQTT
+import board
+from digitalio import DigitalInOut, Direction, Pull
+from analogio import AnalogIn
+import adafruit_si7021
 
-gauge = { 
-  "greenhouse/light": Gauge('light','light in lumens'),
-  "greenhouse/temperature": Gauge('temperature', 'temperature in fahrenheit'),
-  "greenhouse/humidity": Gauge('humidity','relative % humidity')
-}
-
+# Add a secrets.py to your filesystem that has a dictionary called secrets with "ssid" and
+# "password" keys with your WiFi credentials. DO NOT share that file or commit it into Git or other
+# source control.
+# pylint: disable=no-name-in-module,wrong-import-order
 try:
-    from mqtt_secrets import mqtt_secrets
+    from secrets import secrets
 except ImportError:
     print("WiFi secrets are kept in secrets.py, please add them there!")
     raise
 
-def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
-    # Subscribing in on_connect() means that if we lose the connection and
-    # reconnect then subscriptions will be renewed.
-    client.subscribe("greenhouse/light")
-    client.subscribe('greenhouse/temperature')
-    client.subscribe('greenhouse/humidity')
+print("Connecting to %s" % secrets["ssid"])
+wifi.radio.connect(secrets["ssid"], secrets["password"])
+print("Connected to %s!" % secrets["ssid"])
+### Feeds ###
+light_feed = "greenhouse/light"
+temp_feed = "greenhouse/temperature"
+humidity_feed = "greenhouse/humidity"
 
-def on_message(client, userdata, msg):
-    topic = msg.topic
-    payload = msg.payload
-    gauge[topic].set(payload)
+# Define callback methods which are called when events occur
+# pylint: disable=unused-argument, redefined-outer-name
+def connected(client, userdata, flags, rc):
+    # This function will be called when the client is connected
+    # successfully to the broker.
+    print("Connected to MQTT!")
 
-client = mqtt.Client()
-client.username_pw_set(mqtt_secrets["mqtt_user"],mqtt_secrets['mqtt_password'])
-client.on_connect = on_connect
-client.on_message = on_message
-client.connect('localhost',1883,60)
+def disconnected(client, userdata, rc):
+    # This method is called when the client is disconnected
+    print("Disconnected from MQTT!")
 
-if __name__ == '__main__':
-    # Start up the server to expose the metrics.
 
-    client = mqtt.Client()
-    client.username_pw_set('london','abc123')
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect('localhost',1883,60)
+def get_voltage(pin):
+        return (pin.value * 3.3) / 65536
 
-    start_http_server(8000)
-    client.loop_forever()
+# Create a socket pool
+pool = socketpool.SocketPool(wifi.radio)
+
+# Set up a MiniMQTT Client
+mqtt_client = MQTT.MQTT(
+    broker=secrets["broker"],
+    port=secrets["port"],
+    username=secrets["aio_username"],
+    password=secrets["aio_key"],
+    socket_pool=pool,
+    ssl_context=ssl.create_default_context(),
+)
+
+# Setup the callback methods above
+mqtt_client.on_connect = connected
+mqtt_client.on_disconnect = disconnected
+
+# Connect the client to the MQTT broker.
+print("Connecting to MQTT...")
+mqtt_client.connect()
+
+# Create library object using our Bus I2C port
+sensor = adafruit_si7021.SI7021(board.I2C())
+light_pin = AnalogIn(board.IO4)
+
+while True:
+    # Poll the message queue
+    mqtt_client.loop()
+
+    # get the current temperature
+    light_val = get_voltage(light_pin)
+    temp_val = ((sensor.temperature * 9)/5) + 32
+    humidity_val = sensor.relative_humidity
+
+    # Send a new messages
+    mqtt_client.publish(light_feed, light_val)
+    mqtt_client.publish(temp_feed, temp_val)
+    mqtt_client.publish(humidity_feed, humidity_val)
+    time.sleep(0.5)
