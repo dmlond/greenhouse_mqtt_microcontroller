@@ -45,10 +45,6 @@ def disconnected(client, userdata, rc):
     # This method is called when the client is disconnected
     print("Disconnected from MQTT!")
 
-
-def get_voltage(pin):
-        return (pin.value * 3.3) / 65536
-
 # Create a socket pool
 pool = socketpool.SocketPool(wifi.radio)
 
@@ -79,7 +75,7 @@ while True:
     mqtt_client.loop()
 
     # get the current temperature
-    light_val = get_voltage(light_pin)
+    light_val = light_pin.value
     temp_val = ((sensor.temperature * 9)/5) + 32
     humidity_val = sensor.relative_humidity
 
