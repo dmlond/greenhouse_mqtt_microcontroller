@@ -16,9 +16,8 @@ from digitalio import DigitalInOut, Direction, Pull
 from analogio import AnalogIn
 import adafruit_si7021
 
-# Add a secrets.py to your filesystem that has a dictionary called secrets with "ssid" and
-# "password" keys with your WiFi credentials. DO NOT share that file or commit it into Git or other
-# source control.
+# Add a secrets.py to your filesystem that has a dictionary like
+# that in secrets.py.example
 # pylint: disable=no-name-in-module,wrong-import-order
 try:
     from secrets import secrets
